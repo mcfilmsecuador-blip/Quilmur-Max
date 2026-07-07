@@ -131,7 +131,23 @@ export async function analizarPDF(pdfUrl: string): Promise<{ ext: ExtraccionPDF;
     .map((b) => b.text)
     .join("");
   const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("La IA no devolvió JSON válido");
+  if (!match) {
+    console.error(
+      "DEBUG analizarPDF: stop_reason=",
+      resp.stop_reason,
+      "usage=",
+      JSON.stringify(resp.usage),
+      "content_types=",
+      resp.content.map((b) => b.type).join(","),
+      "text_len=",
+      text.length,
+      "text_head=",
+      text.slice(0, 500),
+      "text_tail=",
+      text.slice(-300)
+    );
+    throw new Error("La IA no devolvió JSON válido");
+  }
   return { ext: JSON.parse(match[0]) as ExtraccionPDF, demo: false };
 }
 
