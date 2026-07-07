@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite para prototipo local. Migrable a PostgreSQL cambiando provider + url.
+datasource db {
+  provider = "sqlite"
+  url      = "file:./quilmur.db"
+}
+
+model Project {
+  id          String       @id @default(cuid())
+  nombre      String
+  cliente     String       @default("")
+  disenador   String       @default("")
+  estado      String       @default("BORRADOR")
+  pdfPath     String?
+  pdfNombre   String?
+  pdfPaginas  Int          @default(0)
+  pdfVersion  Int          @default(1)
+  analisisDemo Boolean     @default(false)
+  cutPlanJson String?
+  datosJson   String? // datos generales extraídos del PDF
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  ambientes   Ambiente[]
+  observaciones Observacion[]
+  electrodomesticos Electrodomestico[]
+  accesorios  AccesorioExtra[]
+}
+
+model Ambiente {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nombre    String
+  confianza String     @default("MEDIA")
+  pagina    Int        @default(0)
+  productos Producto[]
+}
+
+// Producto terminado (metro lineal, mueble completo, unidad, etc.)
+model Producto {
+  id         String   @id @default(cuid())
+  ambienteId String
+  ambiente   Ambiente @relation(fields: [ambienteId], references: [id], onDelete: Cascade)
+  nombre     String
+  unidad     String   @default("unidad") // metro lineal | mueble | unidad | conjunto
+  cantidad   Float    @default(1)
+  confianza  String   @default("MEDIA")
+  modulos    Modulo[]
+}
+
+model Modulo {
+  id          String   @id @default(cuid())
+  productoId  String
+  producto    Producto @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  codigo      String   @default("")
+  nombre      String
+  tipo        String // clave de plantilla en la biblioteca de módulos
+  ancho       Int // mm
+  alto        Int // mm
+  profundidad Int // mm
+  cantidad    Int      @default(1)
+  materialEstructura String @default("melamina_blanca")
+  materialFrentes    String @default("melamina_color")
+  color       String   @default("") // color comercial de frentes
+  colorEstructura String @default("") // color de estructura interna cuando es tablero de color
+  espesor     Int      @default(18)
+  puertas     Int      @default(0)
+  cajones     Int      @default(0)
+  repisas     Int      @default(0)
+  lateralVisto Boolean @default(false)
+  observaciones String @default("")
+  confianza   String   @default("MEDIA")
+  pagina      Int      @default(0)
+  confirmado  Boolean  @default(false)
+  piezas      Pieza[]
+}
+
+model Pieza {
+  id       String @id @default(cuid())
+  moduloId String
+  modulo   Modulo @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  codigo   String @default("")
+  nombre   String
+  cantidad Int
+  largo    Int // mm
+  ancho    Int // mm
+  espesor  Int
+  material String
+  color    String @default("")
+  veta     Boolean @default(false)
+  // lados con canto: S=superior I=inferior Z=izquierdo D=derecho, ej "S,I"
+  cantos   String @default("")
+}
+
+model Electrodomestico {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  categoria String
+  marca     String  @default("")
+  modelo    String  @default("")
+  ancho     Int     @default(0)
+  alto      Int     @default(0)
+  profundidad Int   @default(0)
+  origen    String  @default("REFERENCIA") // QUILMUR | CLIENTE | REFERENCIA
+  confianza String  @default("MEDIA")
+  pagina    Int     @default(0)
+}
+
+model AccesorioExtra {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  nombre    String
+  categoria String  @default("")
+  cantidad  Float   @default(1)
+  unidad    String  @default("unidad")
+  precio    Float   @default(0)
+  moduloRef String  @default("")
+  confianza String  @default("MEDIA")
+  pagina    Int     @default(0)
+}
+
+model Observacion {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  texto     String
+  moduloRef String  @default("")
+  confianza String  @default("MEDIA")
+  pagina    Int     @default(0)
+}
+
+// Configuración global editable (precios, reglas, tablero)
+model Config {
+  id    String @id @default("global")
+  json  String
+}
