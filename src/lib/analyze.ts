@@ -112,7 +112,7 @@ export async function analizarPDF(pdfUrl: string): Promise<{ ext: ExtraccionPDF;
   const data = Buffer.from(await (await fetch(pdfUrl)).arrayBuffer());
   const resp = await client.messages.create({
     model: process.env.ANTHROPIC_MODEL || "claude-fable-5",
-    max_tokens: 16000,
+    max_tokens: 32000,
     messages: [
       {
         role: "user",
@@ -148,7 +148,26 @@ export async function analizarPDF(pdfUrl: string): Promise<{ ext: ExtraccionPDF;
     );
     throw new Error("La IA no devolvió JSON válido");
   }
-  return { ext: JSON.parse(match[0]) as ExtraccionPDF, demo: false };
+  try {
+    return { ext: JSON.parse(match[0]) as ExtraccionPDF, demo: false };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const posMatch = msg.match(/position (\d+)/);
+    const pos = posMatch ? Number(posMatch[1]) : Math.floor(match[0].length / 2);
+    console.error(
+      "DEBUG analizarPDF JSON.parse falló:",
+      msg,
+      "stop_reason=",
+      resp.stop_reason,
+      "usage=",
+      JSON.stringify(resp.usage),
+      "json_len=",
+      match[0].length,
+      "contexto=",
+      match[0].slice(Math.max(0, pos - 300), pos + 300)
+    );
+    throw e;
+  }
 }
 
 // Persiste la extracción como entidades revisables. Reemplaza el análisis previo.
