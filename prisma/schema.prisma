@@ -2,12 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Postgres (Vercel Postgres / Neon). directUrl se usa para `prisma db push`
-// contra la conexión sin pooling; url usa la conexión con pooling en runtime.
+// Postgres vía integración Neon-Vercel. Esa integración inyecta DATABASE_URL
+// (con pooling) y DATABASE_URL_UNPOOLED (directa, la usa `prisma db push`).
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model Project {

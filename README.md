@@ -8,7 +8,7 @@ producto terminado, con revisión humana obligatoria antes de aprobar.
 
 ## Puesta en marcha (local)
 
-1. Copia `.env.example` a `.env` y completa `DATABASE_URL`/`DIRECT_URL` (Postgres),
+1. Copia `.env.example` a `.env` y completa `DATABASE_URL`/`DATABASE_URL_UNPOOLED` (Postgres),
    `BLOB_READ_WRITE_TOKEN` (Vercel Blob) y `ANTHROPIC_API_KEY`.
 2. Instala y prepara la base:
 
@@ -30,16 +30,16 @@ La app necesita dos servicios gratuitos conectados al proyecto de Vercel
 sobrevive entre invocaciones, por eso ya no usa SQLite ni carpetas locales):
 
 1. **Importa el repo** en [vercel.com/new](https://vercel.com/new) desde GitHub.
-2. **Base de datos:** en el proyecto → *Storage* → *Create Database* → **Postgres**
-   (o conecta una de Neon). Vercel inyecta automáticamente `DATABASE_URL` y
-   `DIRECT_URL` (o `POSTGRES_URL`/`POSTGRES_URL_NON_POOLING` — en ese caso
-   renómbralas a `DATABASE_URL`/`DIRECT_URL` en *Settings → Environment Variables*,
-   que es como las lee `prisma/schema.prisma`).
+2. **Base de datos:** en el proyecto → *Storage* → conecta la integración **Neon**
+   (deja el "Custom Prefix" vacío). Esto inyecta automáticamente `DATABASE_URL`
+   (con pooling) y `DATABASE_URL_UNPOOLED` (directa), que es como las lee
+   `prisma/schema.prisma`.
 3. **Almacenamiento de PDFs:** *Storage* → *Create Database* → **Blob**. Esto
    inyecta `BLOB_READ_WRITE_TOKEN` automáticamente.
 4. Agrega `ANTHROPIC_API_KEY` y `ANTHROPIC_MODEL` en *Settings → Environment Variables*.
-5. Antes del primer deploy (o desde tu máquina apuntando al `DATABASE_URL` de Vercel),
-   corre `npx prisma db push` para crear las tablas.
+5. Antes del primer deploy (o desde tu máquina, copiando `DATABASE_URL` y
+   `DATABASE_URL_UNPOOLED` desde Vercel a tu `.env` local), corre
+   `npx prisma db push` para crear las tablas.
 6. Redeploy. La URL pública queda lista para compartir y probar el flujo completo.
 
 ## Arquitectura
