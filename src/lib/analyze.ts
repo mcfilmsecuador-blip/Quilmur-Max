@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import fs from "node:fs/promises";
 import { db } from "./db";
 import { MODULE_TEMPLATES, getTemplate } from "./templates";
 
@@ -105,12 +104,12 @@ Responde ÚNICAMENTE con un JSON válido con esta forma exacta:
   "observaciones": [{ "texto": "", "moduloRef": "", "confianza": "ALTA", "pagina": 1 }]
 }`;
 
-export async function analizarPDF(pdfPath: string): Promise<{ ext: ExtraccionPDF; demo: boolean }> {
+export async function analizarPDF(pdfUrl: string): Promise<{ ext: ExtraccionPDF; demo: boolean }> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return { ext: datosDemo(), demo: true };
   }
   const client = new Anthropic();
-  const data = await fs.readFile(pdfPath);
+  const data = Buffer.from(await (await fetch(pdfUrl)).arrayBuffer());
   const resp = await client.messages.create({
     model: process.env.ANTHROPIC_MODEL || "claude-fable-5",
     max_tokens: 16000,

@@ -39,7 +39,7 @@ interface ModuloDTO {
 
 interface ProyectoDTO {
   id: string;
-  pdfPath: string | null;
+  pdfUrl: string | null;
   pdfPaginas: number;
   estado: string;
   ambientes: {
@@ -192,7 +192,7 @@ export default function RevisionClient({
 
         {/* Zona central: visor del PDF */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-2">
-          {proyecto.pdfPath ? (
+          {proyecto.pdfUrl ? (
             <iframe
               key={mod?.pagina ?? 0}
               src={`/api/pdf/${proyecto.id}#page=${mod?.pagina || 1}`}

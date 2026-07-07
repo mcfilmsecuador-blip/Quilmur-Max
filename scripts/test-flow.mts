@@ -1,8 +1,7 @@
 // Prueba de flujo completo sin UI: análisis DEMO → persistencia → despiece →
 // optimización → costos. Ejecutar: npx tsx scripts/test-flow.mts
-import fs from "node:fs/promises";
-import path from "node:path";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import { put } from "@vercel/blob";
 import { db } from "../src/lib/db";
 import { analizarPDF, persistirExtraccion } from "../src/lib/analyze";
 import { generarDespiece } from "../src/lib/despiece";
@@ -27,22 +26,28 @@ async function main() {
     const page = doc.addPage([595, 842]);
     page.drawText(t, { x: 40, y: 780, size: 14, font });
   }
-  const pdfDir = path.join(process.cwd(), "data", "pdfs");
-  await fs.mkdir(pdfDir, { recursive: true });
-
   const proyecto = await db.project.create({
     data: { nombre: "Cocina Diego Monje (prueba)", cliente: "Diego Monje" },
   });
-  const pdfPath = path.join(pdfDir, `${proyecto.id}-v1.pdf`);
-  await fs.writeFile(pdfPath, await doc.save());
+  // Sin BLOB_READ_WRITE_TOKEN local, se guarda un placeholder: el modo DEMO
+  // de analizarPDF no llega a descargarlo, así que no hace falta subirlo.
+  let pdfUrl = "https://example.invalid/demo.pdf";
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blob = await put(`pdfs/${proyecto.id}-v1.pdf`, Buffer.from(await doc.save()), {
+      access: "public",
+      contentType: "application/pdf",
+      addRandomSuffix: false,
+    });
+    pdfUrl = blob.url;
+  }
   await db.project.update({
     where: { id: proyecto.id },
-    data: { pdfPath, pdfNombre: "cocina-diego-monje.pdf", pdfPaginas: 5, estado: "PDF_CARGADO" },
+    data: { pdfUrl, pdfNombre: "cocina-diego-monje.pdf", pdfPaginas: 5, estado: "PDF_CARGADO" },
   });
   console.log("1. Proyecto creado:", proyecto.id);
 
   // Análisis (DEMO si no hay API key)
-  const { ext, demo } = await analizarPDF(pdfPath);
+  const { ext, demo } = await analizarPDF(pdfUrl);
   await persistirExtraccion(proyecto.id, ext, demo);
   console.log(`2. Análisis ${demo ? "DEMO" : "IA"}: ${ext.ambientes.length} ambientes`);
 

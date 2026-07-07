@@ -2,10 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite para prototipo local. Migrable a PostgreSQL cambiando provider + url.
+// Postgres (Vercel Postgres / Neon). directUrl se usa para `prisma db push`
+// contra la conexión sin pooling; url usa la conexión con pooling en runtime.
 datasource db {
-  provider = "sqlite"
-  url      = "file:./quilmur.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Project {
@@ -14,7 +16,8 @@ model Project {
   cliente     String       @default("")
   disenador   String       @default("")
   estado      String       @default("BORRADOR")
-  pdfPath     String?
+  pdfUrl      String? // URL pública en Vercel Blob
+  pdfBlobPath String? // pathname del blob (para poder eliminarlo/reemplazarlo)
   pdfNombre   String?
   pdfPaginas  Int          @default(0)
   pdfVersion  Int          @default(1)

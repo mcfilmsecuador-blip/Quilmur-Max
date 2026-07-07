@@ -60,7 +60,7 @@ export default async function ProyectoResumen({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="PDF técnico">
-          {p.pdfPath ? (
+          {p.pdfUrl ? (
             <div className="space-y-3 text-sm">
               <p>
                 <span className="text-zinc-400">Archivo:</span> {p.pdfNombre} ·{" "}
@@ -85,15 +85,15 @@ export default async function ProyectoResumen({
               required
               className="text-sm text-zinc-400 file:mr-3 file:rounded-lg file:border-0 file:bg-zinc-700 file:px-3 file:py-1.5 file:text-sm file:text-zinc-100 hover:file:bg-zinc-600"
             />
-            <BotonSecundario>{p.pdfPath ? "Subir nueva versión" : "Cargar PDF"}</BotonSecundario>
+            <BotonSecundario>{p.pdfUrl ? "Subir nueva versión" : "Cargar PDF"}</BotonSecundario>
           </form>
         </Card>
 
         <Card title="Flujo de producción">
           <ol className="space-y-3 text-sm">
-            <Paso n={1} listo={!!p.pdfPath} titulo="Cargar PDF técnico" />
+            <Paso n={1} listo={!!p.pdfUrl} titulo="Cargar PDF técnico" />
             <Paso n={2} listo={tieneAnalisis} titulo="Analizar documento con IA">
-              {p.pdfPath && (
+              {p.pdfUrl && (
                 <form action={analizarProyecto.bind(null, p.id)}>
                   <BotonPrimario>
                     {tieneAnalisis ? "Reanalizar PDF" : "Analizar PDF"}

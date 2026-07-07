@@ -6,32 +6,47 @@ producto terminado, con revisión humana obligatoria antes de aprobar.
 
 **Flujo:** Cargar PDF → Analizar (IA) → Revisar/Corregir → Aprobar → Despiece → Optimización → Costos → Orden de producción → Baja de materia prima.
 
-## Puesta en marcha
+## Puesta en marcha (local)
+
+1. Copia `.env.example` a `.env` y completa `DATABASE_URL`/`DIRECT_URL` (Postgres),
+   `BLOB_READ_WRITE_TOKEN` (Vercel Blob) y `ANTHROPIC_API_KEY`.
+2. Instala y prepara la base:
 
 ```bash
 npm install
-npx prisma db push        # crea la base SQLite local
-npm run dev               # http://localhost:3000
+npx prisma db push        # crea las tablas en Postgres
+npm run dev                # http://localhost:3000
 ```
 
-Para análisis real del PDF con IA, edita `.env`:
-
-```
-ANTHROPIC_API_KEY=sk-ant-...
-# ANTHROPIC_MODEL=claude-fable-5   (opcional)
-```
-
-Sin clave, el análisis corre en **modo DEMO** con datos de ejemplo (cocina
-residencial) para probar todo el flujo. Hay un proyecto de prueba ya cargado;
-puedes eliminarlo desde su pestaña Resumen.
+Sin `ANTHROPIC_API_KEY`, el análisis corre en **modo DEMO** con datos de
+ejemplo (cocina residencial) para probar todo el flujo sin gastar créditos.
 
 Prueba de flujo completo sin UI: `npx tsx scripts/test-flow.mts`
+
+## Despliegue en Vercel
+
+La app necesita dos servicios gratuitos conectados al proyecto de Vercel
+(el sistema de archivos de Vercel es efímero: nada que se guarde en disco
+sobrevive entre invocaciones, por eso ya no usa SQLite ni carpetas locales):
+
+1. **Importa el repo** en [vercel.com/new](https://vercel.com/new) desde GitHub.
+2. **Base de datos:** en el proyecto → *Storage* → *Create Database* → **Postgres**
+   (o conecta una de Neon). Vercel inyecta automáticamente `DATABASE_URL` y
+   `DIRECT_URL` (o `POSTGRES_URL`/`POSTGRES_URL_NON_POOLING` — en ese caso
+   renómbralas a `DATABASE_URL`/`DIRECT_URL` en *Settings → Environment Variables*,
+   que es como las lee `prisma/schema.prisma`).
+3. **Almacenamiento de PDFs:** *Storage* → *Create Database* → **Blob**. Esto
+   inyecta `BLOB_READ_WRITE_TOKEN` automáticamente.
+4. Agrega `ANTHROPIC_API_KEY` y `ANTHROPIC_MODEL` en *Settings → Environment Variables*.
+5. Antes del primer deploy (o desde tu máquina apuntando al `DATABASE_URL` de Vercel),
+   corre `npx prisma db push` para crear las tablas.
+6. Redeploy. La URL pública queda lista para compartir y probar el flujo completo.
 
 ## Arquitectura
 
 - **Next.js 16 + TypeScript + Tailwind** (App Router, server actions).
-- **Prisma + SQLite** (`prisma/schema.prisma`); migrable a PostgreSQL cambiando el datasource.
-- **PDFs** almacenados en `data/pdfs/` con versionado (v1, v2, …).
+- **Prisma + Postgres** (`prisma/schema.prisma`) — Vercel Postgres o Neon.
+- **PDFs en Vercel Blob** (`@vercel/blob`), con versionado (v1, v2, …) y URL pública por versión.
 
 Núcleo en `src/lib/`:
 

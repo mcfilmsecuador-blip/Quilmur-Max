@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { put, del } from "@vercel/blob";
 import { PDFDocument } from "pdf-lib";
 import { db } from "./db";
 import { analizarPDF, persistirExtraccion } from "./analyze";
@@ -11,8 +10,6 @@ import { generarDespiece, type ModuloInput } from "./despiece";
 import { optimizar, type PiezaCorte } from "./optimizer";
 import { getConfig, saveConfig, DEFAULT_CONFIG, type QuilmurConfig } from "./config";
 import { getTemplate } from "./templates";
-
-const PDF_DIR = path.join(process.cwd(), "data", "pdfs");
 
 // ---------- Proyectos ----------
 
@@ -30,6 +27,8 @@ export async function crearProyecto(formData: FormData) {
 }
 
 export async function eliminarProyecto(id: string) {
+  const p = await db.project.findUnique({ where: { id } });
+  if (p?.pdfBlobPath) await del(p.pdfBlobPath).catch(() => {});
   await db.project.delete({ where: { id } });
   revalidatePath("/proyectos");
   redirect("/proyectos");
@@ -46,15 +45,19 @@ export async function subirPDF(projectId: string, formData: FormData) {
   } catch {
     paginas = 0;
   }
-  await fs.mkdir(PDF_DIR, { recursive: true });
   const proyecto = await db.project.findUniqueOrThrow({ where: { id: projectId } });
-  const version = proyecto.pdfPath ? proyecto.pdfVersion + 1 : 1;
-  const filePath = path.join(PDF_DIR, `${projectId}-v${version}.pdf`);
-  await fs.writeFile(filePath, bytes);
+  const version = proyecto.pdfUrl ? proyecto.pdfVersion + 1 : 1;
+  if (proyecto.pdfBlobPath) await del(proyecto.pdfBlobPath).catch(() => {});
+  const blob = await put(`pdfs/${projectId}-v${version}.pdf`, bytes, {
+    access: "public",
+    contentType: "application/pdf",
+    addRandomSuffix: false,
+  });
   await db.project.update({
     where: { id: projectId },
     data: {
-      pdfPath: filePath,
+      pdfUrl: blob.url,
+      pdfBlobPath: blob.pathname,
       pdfNombre: file.name,
       pdfPaginas: paginas,
       pdfVersion: version,
@@ -68,7 +71,7 @@ export async function analizarProyecto(projectId: string) {
   const proyecto = await db.project.findUniqueOrThrow({ where: { id: projectId } });
   await db.project.update({ where: { id: projectId }, data: { estado: "EN_ANALISIS" } });
   try {
-    const { ext, demo } = await analizarPDF(proyecto.pdfPath ?? "");
+    const { ext, demo } = await analizarPDF(proyecto.pdfUrl ?? "");
     await persistirExtraccion(projectId, ext, demo);
   } catch (e) {
     await db.project.update({

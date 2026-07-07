@@ -3,6 +3,7 @@
 // Ejecutar: npx tsx scripts/import-diego-monge.mts "<ruta al PDF>"
 import fs from "node:fs/promises";
 import path from "node:path";
+import { put } from "@vercel/blob";
 import { PDFDocument } from "pdf-lib";
 import { db } from "../src/lib/db";
 import { persistirExtraccion, type ExtraccionPDF } from "../src/lib/analyze";
@@ -244,14 +245,16 @@ async function main() {
   const proyecto = await db.project.create({
     data: { nombre: "Cocina Diego Monje", cliente: "Diego Monje", disenador: "Quilmur Home" },
   });
-  const pdfDir = path.join(process.cwd(), "data", "pdfs");
-  await fs.mkdir(pdfDir, { recursive: true });
-  const dest = path.join(pdfDir, `${proyecto.id}-v1.pdf`);
-  await fs.writeFile(dest, bytes);
+  const blob = await put(`pdfs/${proyecto.id}-v1.pdf`, bytes, {
+    access: "public",
+    contentType: "application/pdf",
+    addRandomSuffix: false,
+  });
   await db.project.update({
     where: { id: proyecto.id },
     data: {
-      pdfPath: dest,
+      pdfUrl: blob.url,
+      pdfBlobPath: blob.pathname,
       pdfNombre: path.basename(srcPdf),
       pdfPaginas: doc.getPageCount(),
       estado: "PDF_CARGADO",
